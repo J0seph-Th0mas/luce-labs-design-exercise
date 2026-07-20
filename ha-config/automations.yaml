@@ -1,0 +1,111 @@
+# automations.yaml
+
+- id: rack1_irrigation_start
+  alias: "Rack 1 - Start irrigation (moisture + temp correlation)"
+  description: >
+    Irrigates only when substrate is dry AND air temperature is warm enough
+    that wet+cold substrate won't risk root rot. This is the genuinely joint
+    decision — a temperature veto blocks irrigation even when moisture alone
+    says "water now."
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.rack1_effective_moisture
+      below: 30
+  condition:
+    - condition: state
+      entity_id: binary_sensor.rack1_sensors_healthy
+      state: "on"
+    - condition: state
+      entity_id: input_boolean.rack1_manual_valve_override
+      state: "off"
+    - condition: numeric_state
+      entity_id: sensor.rack1_effective_temperature
+      above: 15
+    - condition: state
+      entity_id: switch.rack1_irrigation_valve
+      state: "off"
+    - condition: template
+      # anti-short-cycling: at least 30 min since the valve last turned off
+      value_template: >
+        {{ (as_timestamp(now()) - as_timestamp(states.switch.rack1_irrigation_valve.last_changed)) > 1800 }}
+  action:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.rack1_irrigation_valve
+    - service: logbook.log
+      data:
+        name: "Rack 1 Irrigation"
+        message: >
+          Started: moisture {{ states('sensor.rack1_effective_moisture') }}%,
+          temp {{ states('sensor.rack1_effective_temperature') }}°C
+
+- id: rack1_irrigation_stop_hysteresis
+  alias: "Rack 1 - Stop irrigation at hysteresis target"
+  trigger:
+    - platform: numeric_state
+      entity_id: sensor.rack1_effective_moisture
+      above: 45
+  condition:
+    - condition: state
+      entity_id: switch.rack1_irrigation_valve
+      state: "on"
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.rack1_irrigation_valve
+    - service: logbook.log
+      data:
+        name: "Rack 1 Irrigation"
+        message: "Stopped: moisture target reached ({{ states('sensor.rack1_effective_moisture') }}%)"
+
+- id: rack1_irrigation_max_runtime_failsafe
+  alias: "Rack 1 - Force valve off after max runtime (stuck-valve failsafe)"
+  description: >
+    Independent of the hysteresis stop condition above — if the valve has
+    been on for more than 3 minutes for any reason, force it off. Protects
+    against a stuck-open relay or a missed hysteresis trigger.
+  trigger:
+    - platform: state
+      entity_id: switch.rack1_irrigation_valve
+      to: "on"
+      for:
+        minutes: 3
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.rack1_irrigation_valve
+    - service: persistent_notification.create
+      data:
+        title: "Rack 1 Irrigation Failsafe"
+        message: >
+          Valve forced off after exceeding 3-minute max runtime. Check for a
+          stuck relay or valve before the next cycle.
+
+- id: rack1_sensor_offline_alert
+  alias: "Rack 1 - Alert on sensor fault or offline"
+  trigger:
+    - platform: state
+      entity_id: binary_sensor.rack1_sensors_healthy
+      to: "off"
+      for:
+        minutes: 10
+  action:
+    - service: persistent_notification.create
+      data:
+        title: "Rack 1 Sensor Fault"
+        message: >
+          Moisture or temperature sensor unavailable/implausible for over
+          10 minutes. Irrigation decisions are blocked until resolved.
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.rack1_manual_valve_override
+
+- id: rack1_valve_restore_off_on_ha_restart
+  alias: "Rack 1 - Force valve off on HA startup"
+  trigger:
+    - platform: homeassistant
+      event: start
+  action:
+    - service: switch.turn_off
+      target:
+        entity_id: switch.rack1_irrigation_valve

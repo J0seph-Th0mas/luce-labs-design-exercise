@@ -1,0 +1,50 @@
+# dashboard.yaml — Lovelace sketch for Rack 1 slice
+
+title: "Rack 1 — Moisture/Temp/Irrigation"
+views:
+  - title: Rack 1
+    cards:
+      - type: entities
+        title: "Live Readings"
+        entities:
+          - entity: sensor.rack1_effective_moisture
+            name: "Substrate Moisture"
+          - entity: sensor.rack1_effective_temperature
+            name: "Air Temperature"
+          - entity: sensor.rack1_air_humidity
+            name: "Air Humidity"
+          - entity: binary_sensor.rack1_sensors_healthy
+            name: "Sensors Healthy"
+          - entity: binary_sensor.rack1_moisture_sensor_fault
+            name: "Moisture Sensor Fault"
+
+      - type: entities
+        title: "Irrigation"
+        entities:
+          - entity: switch.rack1_irrigation_valve
+            name: "Valve"
+          - entity: input_boolean.rack1_manual_valve_override
+            name: "Manual Lockout"
+
+      - type: history-graph
+        title: "24h Trend"
+        hours_to_show: 24
+        entities:
+          - sensor.rack1_effective_moisture
+          - sensor.rack1_effective_temperature
+          - switch.rack1_irrigation_valve
+
+      - type: entities
+        title: "Bench Simulation"
+        entities:
+          - entity: input_boolean.rack1_simulation_mode
+            name: "Simulation Mode"
+          - entity: input_number.rack1_sim_moisture
+            name: "Simulated Moisture"
+          - entity: input_number.rack1_sim_temperature
+            name: "Simulated Air Temperature"
+
+      - type: logbook
+        title: "Irrigation Log"
+        entities:
+          - switch.rack1_irrigation_valve

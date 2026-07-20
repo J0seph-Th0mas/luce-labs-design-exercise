@@ -1,0 +1,30 @@
+# helpers.yaml
+# Simulation helpers so the correlation logic can be demonstrated without
+# live hardware. Toggle input_boolean.rack1_simulation_mode to switch the
+# template sensors below from real entities to these simulated values.
+
+input_boolean:
+  rack1_simulation_mode:
+    name: "Rack 1 Simulation Mode"
+    icon: mdi:flask-outline
+
+  rack1_manual_valve_override:
+    name: "Rack 1 Manual Valve Lockout"
+    icon: mdi:pump-off
+
+input_number:
+  rack1_sim_moisture:
+    name: "Rack 1 Simulated Moisture"
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:water-percent
+
+  rack1_sim_temperature:
+    name: "Rack 1 Simulated Air Temperature"
+    min: -5
+    max: 45
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer

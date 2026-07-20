@@ -1,0 +1,38 @@
+# template_sensors.yaml
+# These "effective" sensors are what the automation actually reads.
+# When simulation mode is off, they pass through the real entities.
+# When on, they pass through the input_number helpers instead — lets you
+# demo the automation firing without live hardware.
+
+template:
+  - sensor:
+      - name: "Rack 1 Effective Moisture"
+        unique_id: rack1_effective_moisture
+        unit_of_measurement: "%"
+        state: >
+          {% if is_state('input_boolean.rack1_simulation_mode', 'on') %}
+            {{ states('input_number.rack1_sim_moisture') }}
+          {% else %}
+            {{ states('sensor.rack1_substrate_moisture') }}
+          {% endif %}
+
+      - name: "Rack 1 Effective Air Temperature"
+        unique_id: rack1_effective_temperature
+        unit_of_measurement: "°C"
+        state: >
+          {% if is_state('input_boolean.rack1_simulation_mode', 'on') %}
+            {{ states('input_number.rack1_sim_temperature') }}
+          {% else %}
+            {{ states('sensor.rack1_air_temperature') }}
+          {% endif %}
+
+  - binary_sensor:
+      - name: "Rack 1 Sensors Healthy"
+        unique_id: rack1_sensors_healthy
+        state: >
+          {{ is_state('input_boolean.rack1_simulation_mode', 'on')
+             or (
+               states('sensor.rack1_substrate_moisture') not in ['unknown','unavailable']
+               and states('sensor.rack1_air_temperature') not in ['unknown','unavailable']
+               and not is_state('binary_sensor.rack1_moisture_sensor_fault', 'on')
+             ) }}
